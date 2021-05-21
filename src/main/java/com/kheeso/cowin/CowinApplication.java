@@ -41,12 +41,15 @@ public class CowinApplication {
 	@Value("${cowin.ageGroups}")
 	List<Integer> ageGroups;
 
+	@Value("${cowin.doseNumber}")
+	Integer doseNumber;
+
     DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     public static void main(String[] args) {
     	SpringApplication.run(CowinApplication.class, args);
     }
 
-    // Check every 10 sec
+    // Check every 5 sec
     @Scheduled(fixedRate = 10000)
     @GetMapping(value = "/cowin")
     public void cowinSlotCheck() throws IOException {
@@ -57,7 +60,7 @@ public class CowinApplication {
 		}
     }
 	private boolean fetchResults(String disctrictCode) throws MalformedURLException {
-		URL url = new URL(String.format(cowinUrl, disctrictCode, LocalDate.now().plusDays(1).format(dateFormatter)));
+		URL url = new URL(String.format(cowinUrl, disctrictCode, LocalDate.now().format(dateFormatter)));
 		boolean flag = false;
 		try {
 			Root response = new ObjectMapper().readValue(getResponse(url), Root.class);
@@ -65,8 +68,9 @@ public class CowinApplication {
 				for (Session s : c.getSessions()) {
 					if (ageGroups.contains(s.getMin_age_limit()))
 						if(vaccines.contains(s.getVaccine())) {
-							if (s.getAvailable_capacity() > 0) {
-								log.info(c.getPincode() + " : " + s.getDate() + " : " + s.getAvailable_capacity() + " -- " + c.getName() + " - " + c);
+							if((doseNumber == 1 && s.available_capacity_dose1> 0)
+								|| (doseNumber == 2 && s.available_capacity_dose2>0)) {
+								log.info(c.getPincode() + " : " + s.getDate() + " : " + s.getAvailable_capacity() + " -- " + c.getName() + " - " + s);
 								final Runnable runnable =
 										(Runnable) Toolkit.getDefaultToolkit().getDesktopProperty("win.sound.exclamation");
 								if (runnable != null) runnable.run();
